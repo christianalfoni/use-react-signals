@@ -1,19 +1,26 @@
 # use-react-signal
 
-Replace useState with useSignal and forget about performance issues.
+Replace **useState** with **useSignal** and say goodbye to performance issues.
+
+- ☘️ Gradual adoption replacing **useState** with **useSignal**
+- 🌎 Share state through **props** or **context** without performance challenges
+- 🧠 Same mental model for updating state and using effects and memoizing
+- 🎈 Simple implementation that you can **read** and **understand**
+
+## Get Started
 
 ```sh
 npm install use-react-signal
 ```
 
-Activate the plugin to optimise all application components to become observers. No explicit observation or memo components needed.
+Make your components default to **observation** instead of **reconciliation**:
 
 ```ts
 import babelPlugin from "use-react-signal/babel-plugin";
 import swcPlugin from "use-react-signal/swc-plugin";
 ```
 
-The `useSignal` hook has the same signature as `useState`. The difference is that the state is a signal. You access and observe the value with `.value`.
+## Example
 
 ```tsx
 import { useSignal } from "use-react-signal";
@@ -29,51 +36,39 @@ function Counter() {
 }
 ```
 
-## Why?
+The same signature, only the state is a signal. Use `.value` to access and observe the value.
 
-The primary reason developers lean on state management beyond `useState` is because of its performance characteristics. With shallow value comparison React quickly hits performance issues with state management, especially using context.
-
-By simply making all components observers using the plugin and replacing `useState` with `useSignal`, your React components will optimally reconcile from contexts and props passing out of the box.
-
-The library is designed to showcase how React itself could provide such a primitive natively.
-
-## Component behavior
-
-By default `useState` causes all nested components to reconcile. With context `useState` will cause all consuming components AND their nested components to reconcile.
-
-With `use-react-signal` your components do not reconcile by default. They rather observe by default. That means exposing a signal as a prop, or on a context, will not cause the component to reconcile, only accessing the signal value will.
-
-## Context
-
-Now that components only reconcile when accessed signals change, the context providers can safely expose state without performance challenges.
+Scale up your contexts for accessible state management without worrying about performance issues:
 
 ```tsx
-function StateContextProvider({ children }) {
+import { createContext, useContext } from "react";
+import { useSignal } from "use-react-signal";
+
+const AppStateContext = createContext(null);
+
+export function useState() {
+  return useContext(AppStateContext);
+}
+
+export function AppStateProvider({ children }) {
   const [count, setCount] = useSignal(0);
 
-  const state = {
-    count,
-    increase() {
-      setCount(count.value + 1);
-    },
-  };
+  function increment() {
+    setCount(count.value + 1);
+  }
 
   return (
-    <StateContext.Provider value={state}>{children}</StateContext.Provider>
+    <AppStateContext.Provider value={{ count, increment }}>
+      {children}
+    </AppStateContext.Provider>
   );
 }
 ```
 
-You can compose multiple hooks together and safely expose them all through the context.
+## How
 
-## Effects and Computed
+With signals there will be far less changes to props/context that trigger reconciliation. This is because signals are passed by reference and not value, which means the same signal instance will be passed to child components, even when the value changes. The result of this is isolated and predictable reconciliation.
 
-Other reactive solutions also includes their own observable effects and computed. This is not strictly necessary for React. Since signal values can still be shallow compared, just like `useState`, you use `useEffect` and `useMemo` as normal. Linters and typing are unaffected.
+The **plugin** will transform your application components to observe signals and prevent reconciliation waterfalls with **memo**.
 
-```tsx
-function Counter() {
-  const [count, setCount] = useSignal(0);
-
-  const doubled = useMemo(() => count.value * 2, [count.value]);
-}
-```
+With the minimal implementation of signals and observation, the application will be more performant and waste less memory due to targeted reconciliation.

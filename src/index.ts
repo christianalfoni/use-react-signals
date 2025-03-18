@@ -8,7 +8,22 @@ const isServer = typeof window === "undefined";
 
 export type { Signal } from "./signal";
 
+function serverThrowUpdateError() {
+  throw new Error("You can not ");
+}
+
 export function useSignal<T>(value: T) {
+  if (isServer) {
+    return [
+      {
+        get value() {
+          return value;
+        },
+      },
+      serverThrowUpdateError,
+    ];
+  }
+
   const signalRef = useRef<SignalTuple<T>>(null);
 
   if (!signalRef.current) {
