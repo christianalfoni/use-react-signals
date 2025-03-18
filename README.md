@@ -43,6 +43,29 @@ By default `useState` causes all nested components to reconcile. With context `u
 
 With `use-react-signal` your components do not reconcile by default. They rather observe by default. That means exposing a signal as a prop or on a context will not cause the component to reconcile, only accessing the signal value will.
 
+## Context
+
+Now that components only reconcile when accessed signals change, the context providers can safely expose state without performance challenges.
+
+```tsx
+function StateContextProvider({ children }) {
+  const [count, setCount] = useSignal(0);
+
+  const state = {
+    count,
+    increase() {
+      setCount(count.value + 1);
+    },
+  };
+
+  return (
+    <StateContext.Provider value={state}>{children}</StateContext.Provider>
+  );
+}
+```
+
+You can compose multiple hooks together and safely expose them all through the context.
+
 ## Effects and Computed
 
 Other reactive solutions also includes their own observable effects and computed. This is not strictly necessary for React. Since signal values can still be shallow compared, just like `useState`, you on `useEffect` and `useMemo` as normal. Linters and typing works as normal
