@@ -1,0 +1,49 @@
+{
+  "name": "use-react-signal",
+  "version": "1.0.0",
+  "description": "Replace useState with useSignal and forget about performance issues",
+  "files": [
+    "dist"
+  ],
+  "module": "./dist/esm/index.js",
+  "main": "./dist/esm/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "types": "./dist/esm/index.d.ts",
+      "require": "./dist/cjs/index.cjs"
+    },
+    "./babel-plugin": {
+      "import": "./dist/esm/babel-plugin.js",
+      "types": "./dist/esm/babel-plugin.d.ts",
+      "require": "./dist/cjs/babel-plugin.cjs"
+    },
+    "./swc-plugin": {
+      "import": "./dist/esm/swc-plugin.js",
+      "types": "./dist/esm/swc-plugin.d.ts",
+      "require": "./dist/cjs/swc-plugin.cjs"
+    }
+  },
+  "types": "./dist/esm/index.d.ts",
+  "scripts": {
+    "build": "yarn clean && yarn build:cjs && yarn build:esm",
+    "build:cjs": "tsc -p ./tsconfig.build-cjs.json && node renameToCjs.js",
+    "build:esm": "tsc -p ./tsconfig.build-esm.json",
+    "clean": "rimraf ./dist ./dist-babel-plugin ./dist-swc-plugin",
+    "test": "vitest",
+    "prepublish": "yarn build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/react": "^19.0.11",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "babel-plugin-observing-components": "^0.1.8",
+    "swc-plugin-observing-components": "^0.1.5"
+  }
+}
