@@ -1,30 +1,42 @@
 # use-react-signals
 
-Replace **useState** with **useSignals** for shared state and say goodbye to performance issues.
+Simplify shared state management and boost React performance by replacing **useState** with **useSignals**.
 
-- 🌎 Share state through **props** or **context** without performance challenges
-- ☘️ Gradual adoption replacing **useState** with **useSignals** where it makes sense
-- 🧠 Same mental model for updating state and using effects and memoizing
-- 🎈 Simple implementation that you can **read** and **understand**
+- 🌎 **Efficient Shared State**: Seamlessly share state through **props** or **context** without triggering unnecessary re-renders.
+- ☘️ **Incremental Adoption**: Gradually replace **useState** with **useSignals** where it benefits your application.
+- 🧠 **Familiar Mental Model**: Maintain the intuitive React patterns you already know for state updates, effects, and memoization.
+- 🎈 **Transparent Implementation**: Clear, simple, and readable implementation that you can easily understand.
 
-## Get Started
+## Installation
 
 ```sh
 npm install use-react-signals
 ```
 
-Make your components default to **observation** instead of **reconciliation**:
+## Enable Observation Mode
+
+Observation Mode makes components observers of signals and allows for targeted reconciliation. Use the provided plugins to automatically enable this mode:
+
+### Babel Plugin
 
 ```ts
 import babelPlugin from "use-react-signals/babel-plugin";
+```
+
+### SWC Plugin
+
+```ts
 import swcPlugin from "use-react-signals/swc-plugin";
 ```
 
-## Example
+## Basic Example
+
+Here's a minimal example demonstrating how **useSignals** works:
 
 ```tsx
-import { useSignals } from "use-react-signal";
+import { useSignals } from "use-react-signals";
 
+// Does not re-render on `count` changes
 function Counter() {
   const [counter, setCounter] = useSignals({
     count: 0,
@@ -41,20 +53,20 @@ function Counter() {
   );
 }
 
+// Re-renders only when `count` changes
 function Count({ counter }) {
-  // Count is observed when accessed
   return <h1>My count is: {counter.count}</h1>;
 }
 
+// Does not re-render on `count` changes
 function Incrementer({ counter }) {
-  // Only Count will reconcile when incrementing
   return <button onClick={counter.increment}>Increment</button>;
 }
 ```
 
-**useState** is great for local component state, but when you want to share state, either through props or context, use **useSignals**. It takes an object where each key represents an immutable signal. It also encourages to include methods, as the result of this is state management that only triggers reconciliation when the accessed signal changes its value.
+## Using Signals with React Context
 
-Scale up your contexts for accessible state management without worrying about performance issues:
+You can easily expose shared state via context with signals:
 
 ```tsx
 import { createContext, useContext } from "react";
@@ -62,30 +74,28 @@ import { useSignals } from "use-react-signals";
 
 const AppStateContext = createContext(null);
 
-export function useState() {
+export function useAppState() {
   return useContext(AppStateContext);
 }
 
 export function AppStateProvider({ children }) {
-  const [counter, setCounter] = useSignals({
+  const [state, setState] = useSignals({
     count: 0,
     increment() {
-      setCounter({ count: counter.count + 1 });
+      setState({ count: state.count + 1 });
     },
   });
 
   return (
-    <AppStateContext.Provider value={counter}>
+    <AppStateContext.Provider value={state}>
       {children}
     </AppStateContext.Provider>
   );
 }
 ```
 
-## How
+## How It Works
 
-With signals there will be far less changes to props/context references that trigger reconciliation. This is because the object returned by **useSignals** never changes reference. The functions never changes reference either. The only way reconciliation can trigger is when a component accesses a signal key. The result of this is isolated and predictable reconciliation.
+**useSignals** returns an object whose reference never changes, significantly reducing unnecessary re-renders caused by changes in props or context references. The methods returned by **useSignals** also retain stable references. Components re-render only when they explicitly access updated signal keys.
 
-The **plugin** will transform your application components to observe signals and prevent reconciliation waterfalls with **memo**.
-
-With the minimal implementation of signals and observation, the application will be more performant and waste less memory due to targeted reconciliation.
+Observation Mode, enabled by the Babel or SWC plugins, makes components observers of signals, allowing targeted reconciliation and improving performance by avoiding unnecessary re-renders.
