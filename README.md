@@ -71,4 +71,4 @@ With signals there will be far less changes to props/context that trigger reconc
 
 The **plugin** will transform your application components to observe signals and prevent reconciliation waterfalls with **memo**.
 
-With the minimal implementation of signals and observation, the application will be more performant and waste less memory due to targeted reconciliation.
+With the minimal implementation of signals and observation, the application will be more performant and waste less memory due to targeted reconciliation. The cost... `count.value`.
