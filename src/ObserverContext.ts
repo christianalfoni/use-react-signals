@@ -1,12 +1,13 @@
 // Use for memory leak debugging
-// const registry = new FinalizationRegistry((message) => console.log(message));
+// const registry = new FinalizationRegistry(console.log);
 
 // This global counter makes sure that every signal update is unqiue and
 // can be tracked by React
 let currentSnapshot = 0;
 
-// This is instantiated by a signal to keep track of what ObsererContexts are interested
-// in the signal and notifies them when the signal changes
+// Every signal created has a related signal notifier. This signal notifier is responsible for
+// keeping track of what components (observer contexts) are currently accessing the signal. When a signal changes
+// it will notify all related components. This is done by keeping a set of ObserverContexts
 export class SignalNotifier {
   contexts = new Set<ObserverContext>();
   constructor() {}
@@ -32,13 +33,12 @@ export class SignalNotifier {
   }
 }
 
-// The observer context is responsible for keeping track of signals accessed in a component, derived or effect. It
-// does this by being set as the currently active ObserverContext. Any signals setting/getting will register
-// to this active ObserverContext. The component/derived/effect then subscribes to the context, which will add the
-// context to every signal tracked. When context is notified about a change it will remove itself from current signals
-// and notify any subscribers of the context. It is expected that the subscriber(s) of the context will initiate tracking again.
-// The subscription to the context can be disposed, which will also remove the context from any tracked signals. This makes
-// sure that component/store unmount/disposal will also remove the context from any signals... making it primed for garbage collection
+// Every component has an ObserverContext. When the components starts tracking, the context becomes the active context
+// in the system. Any component retrieving a signal value will register to this active ObserverContext.
+// The component then subscribes to the context, which will add the context to every signal tracked, allowing
+// it to notify these contexts when the signal value is updated. When the context is notified about a change it will remove itself from current signals
+// and notify any subscribing components. When component unmounts the subscription is disposed. This will remove the context from any tracked signals,
+// making sure that component unmount will also remove the context from any signals... making it primed for garbage collection
 export class ObserverContext {
   // We keep a global reference to the currently active observer context
   private static currentContext: ObserverContext | undefined = undefined;
@@ -48,10 +48,9 @@ export class ObserverContext {
   }
 
   // We track all signals accessed by this context
-  _signals = new Set<SignalNotifier>();
+  _signalNotifiers = new Set<SignalNotifier>();
   // An ObserverContext only has one subscriber at any time
   _subscriber?: () => void;
-  stackTrace = "";
   // Components are using "useSyncExternalStore" which expects a snapshot to indicate a change
   // to the store. We use a simple number for this to trigger reconciliation of a component. We start
   // out with the current as it reflects the current state of all signals
@@ -63,10 +62,12 @@ export class ObserverContext {
   }
 
   startTracking() {
+    // We clear our existing signals as dynamic UIs might track different signals now
+    this._signalNotifiers.clear();
     ObserverContext.currentContext = this;
   }
 
-  // Deactivates this context if it's the current one
+  // Deactivates this context
   stopTracking() {
     if (ObserverContext.currentContext === this) {
       ObserverContext.currentContext = undefined;
@@ -75,7 +76,7 @@ export class ObserverContext {
 
   registerSignal(signal: SignalNotifier) {
     // Track the signal access
-    this._signals.add(signal);
+    this._signalNotifiers.add(signal);
   }
 
   // When adding a subscriber we ensure that the relevant signals are
@@ -90,13 +91,14 @@ export class ObserverContext {
     this._subscriber = subscriber;
 
     // Make sure all tracked signals have this context registered
-    this._signals.forEach((signal) => signal.addContext(this));
+    this._signalNotifiers.forEach((signal) => signal.addContext(this));
 
     // Return unsubscribe function
     return () => {
       this._subscriber = undefined;
       // Clean up by removing this context from all signals
-      this._signals.forEach((signal) => signal.removeContext(this));
+      this._signalNotifiers.forEach((signal) => signal.removeContext(this));
+      this._signalNotifiers.clear();
     };
   }
 
@@ -109,10 +111,10 @@ export class ObserverContext {
 
     // We clear the tracking information of the ObserverContext when we notify
     // as it should result in a new tracking
-    this._signals.forEach((signal) => {
+    this._signalNotifiers.forEach((signal) => {
       signal.removeContext(this);
     });
-    this._signals.clear();
+    this._signalNotifiers.clear();
 
     // Notify the single subscriber if it exists
     if (this._subscriber) {
