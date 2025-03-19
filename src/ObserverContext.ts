@@ -42,6 +42,7 @@ export class SignalNotifier {
 export class ObserverContext {
   // We keep a global reference to the currently active observer context
   private static currentContext: ObserverContext | undefined = undefined;
+  private _snapshot = currentSnapshot;
 
   static get current(): ObserverContext | undefined {
     return ObserverContext.currentContext;
@@ -54,7 +55,19 @@ export class ObserverContext {
   // Components are using "useSyncExternalStore" which expects a snapshot to indicate a change
   // to the store. We use a simple number for this to trigger reconciliation of a component. We start
   // out with the current as it reflects the current state of all signals
-  snapshot = currentSnapshot;
+  get snapshot() {
+    // It is possible that a tracked signal has changed its snapshot after
+    // we have stopped tracking and before we have started subscribing. We
+    // have to guarantee to React that we indeed have the same snapshot as
+    // when we initially tracked the signals, or React needs to reconcile again
+    if (!this._subscriber) {
+      this._signalNotifiers.forEach((signal) => {
+        this._snapshot = Math.max(this._snapshot, signal.snapshot);
+      });
+    }
+
+    return this._snapshot;
+  }
 
   constructor() {
     // Use for memory leak debugging
@@ -106,7 +119,7 @@ export class ObserverContext {
   // generated. We immediately apply it and React will now reconcile given it is
   // subscribing
   notify(snapshot: number) {
-    this.snapshot = snapshot;
+    this._snapshot = snapshot;
 
     // We clear the tracking information of the ObserverContext when we notify
     // as it should result in a new tracking
