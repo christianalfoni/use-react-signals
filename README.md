@@ -5,7 +5,7 @@ Simplify shared state management and boost React performance by replacing **useS
 - 🌎 **Efficient Shared State**: Seamlessly share state through **props** or **context** without triggering unnecessary re-renders.
 - ☘️ **Incremental Adoption**: Gradually replace **useState** with **useSignals** where it benefits your application.
 - 🧠 **Familiar Mental Model**: Maintain the intuitive React patterns you already know for state updates, effects, and memoization.
-- 🎈 **Transparent Implementation**: Clear, simple, and readable implementation that you can easily understand.
+- 🎈 **Transparent Implementation**: Clear, simple, and readable implementation that you can understand.
 
 ## Installation
 
@@ -99,3 +99,9 @@ export function AppStateProvider({ children }) {
 **useSignals** returns an object whose reference never changes, significantly reducing unnecessary re-renders caused by changes in props or context references. The methods returned by **useSignals** also retain stable references. Components re-render only when they explicitly access updated signal keys.
 
 Observation Mode, enabled by the Babel or SWC plugins, makes components observers of signals, allowing targeted reconciliation and improving performance by avoiding unnecessary re-renders.
+
+## Did you know?
+
+- You can use **useSignals** for local component state if you prefer it
+- You can safely perform asynchronous state changes in effects as the component stops subscribing to signals when it unmounts
+- You can use **useSignals** with **useMemo** and **useEffect** as normal
