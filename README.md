@@ -96,7 +96,7 @@ export function AppStateProvider({ children }) {
 
 ## How It Works
 
-**useSignals** returns an object whose reference never changes, significantly reducing unnecessary re-renders caused by changes in props or context references. The methods returned by **useSignals** also retain stable references. Components re-render only when they explicitly access updated signal keys.
+**useSignals** returns an object whose reference never changes, significantly reducing unnecessary re-renders caused by changes in props or context references. The methods returned by **useSignals** also retain stable references. Components re-render only when they explicitly access signal keys that updates.
 
 Observation Mode, enabled by the Babel or SWC plugins, makes components observers of signals, allowing targeted reconciliation and improving performance by avoiding unnecessary re-renders.
 
