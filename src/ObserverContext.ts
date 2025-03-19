@@ -98,7 +98,6 @@ export class ObserverContext {
       this._subscriber = undefined;
       // Clean up by removing this context from all signals
       this._signalNotifiers.forEach((signal) => signal.removeContext(this));
-      this._signalNotifiers.clear();
     };
   }
 

@@ -1,9 +1,9 @@
 # use-react-signals
 
-Replace **useState** with **useSignals** and say goodbye to performance issues.
+Replace **useState** with **useSignals** for shared state and say goodbye to performance issues.
 
-- ☘️ Gradual adoption replacing **useState** with **useSignals**
 - 🌎 Share state through **props** or **context** without performance challenges
+- ☘️ Gradual adoption replacing **useState** with **useSignals** where it makes sense
 - 🧠 Same mental model for updating state and using effects and memoizing
 - 🎈 Simple implementation that you can **read** and **understand**
 
@@ -29,15 +29,30 @@ function Counter() {
   const [counter, setCounter] = useSignals({
     count: 0,
     increment() {
-      setCounter({ count: counter.count });
+      setCounter({ count: counter.count + 1 });
     },
   });
 
-  return <button onClick={counter.increment}>Count {counter.count}</button>;
+  return (
+    <>
+      <Count counter={counter} />
+      <Incrementer counter={counter} />
+    </>
+  );
+}
+
+function Count({ counter }) {
+  // Count is observed when accessed
+  return <h1>My count is: {counter.count}</h1>;
+}
+
+function Incrementer({ counter }) {
+  // Only Count will reconcile when incrementing
+  return <button onClick={counter.increment}>Increment</button>;
 }
 ```
 
-**useState** is great for local component state, but when you want to share state, either through props or context, use **useSignals**. It requires an object where each key represents a signal. It is also encouraged to include methods, as the result of this is state management that only triggers reconciliation when the accessed signal changes its value.
+**useState** is great for local component state, but when you want to share state, either through props or context, use **useSignals**. It takes an object where each key represents an immutable signal. It also encourages to include methods, as the result of this is state management that only triggers reconciliation when the accessed signal changes its value.
 
 Scale up your contexts for accessible state management without worrying about performance issues:
 

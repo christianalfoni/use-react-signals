@@ -50,7 +50,7 @@ export function createSignals<T extends Record<string, any>>(value: T) {
 
 export function useSignals<T extends Record<string, any>>(value: T) {
   if (isServer) {
-    return [value, serverThrowUpdateError];
+    return [value, serverThrowUpdateError] as SignalsTuple<T>;
   }
 
   const signalRef = useRef<{

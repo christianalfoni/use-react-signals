@@ -1,10 +1,13 @@
-import { useSignal } from "use-react-signal";
+import { useSignals } from "use-react-signals";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
 
 function App() {
-  const [count, setCount] = useSignal(0);
+  const [counter, setCounter] = useSignals({
+    count: 0,
+    increment,
+  });
 
   return (
     <>
@@ -18,9 +21,7 @@ function App() {
       </div>
       <h1>Vite + React</h1>
       <div className="card">
-        <button onClick={() => setCount(count.value + 1)}>
-          count is {count.value}
-        </button>
+        <button onClick={counter.increment}>count is {counter.count}</button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
@@ -30,6 +31,12 @@ function App() {
       </p>
     </>
   );
+
+  function increment() {
+    setCounter({
+      count: counter.count + 1,
+    });
+  }
 }
 
 export default App;
