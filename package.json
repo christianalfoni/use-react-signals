@@ -1,6 +1,6 @@
 {
   "name": "use-react-signals",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Replace useState with useSignal and forget about performance issues",
   "files": [
     "dist"

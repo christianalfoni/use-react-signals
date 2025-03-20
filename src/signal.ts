@@ -7,7 +7,7 @@ export type SignalTuple<T> = [
 
 export function signal<T>(initialValue: T) {
   let value = initialValue;
-  const signalNotifier = new SignalNotifier();
+  const signalNotifier = SignalNotifier();
 
   function signalGetter() {
     if (ObserverContext.current) {

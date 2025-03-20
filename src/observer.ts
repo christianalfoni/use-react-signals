@@ -10,15 +10,7 @@ export function observer<T>(component: FunctionComponent<T>) {
   }
 
   function ObserverComponent(props: T) {
-    const observerContextRef = useRef<ObserverContext>(null);
-
-    if (!observerContextRef.current) {
-      // The observer context is responsible for tracking signal access during
-      // component render
-      observerContextRef.current = new ObserverContext();
-    }
-
-    const observerContext = observerContextRef.current;
+    const observerContext = ObserverContext();
 
     // We start tracking the signals accessed by this component
     observerContext.startTracking();
@@ -27,13 +19,13 @@ export function observer<T>(component: FunctionComponent<T>) {
     // in concurrent mode, or we could risk not disposing subscriptions
     useSyncExternalStore(
       // We subscribe to the context. This only notifies about a change
-      (update) => observerContext.subscribe(update),
+      observerContext.subscribe,
       // We then grab the current snapshot, which is the global number for any change to any signal,
       // ensuring we'll always get a new snapshot whenever a related signal changes
-      () => observerContext.snapshot,
+      observerContext.getSnapshot,
       // Even though Impact is not designed to run on the server, we still give this callback
       // as for example Next JS requires it to be there, even when rendering client only components
-      () => observerContext.snapshot
+      observerContext.getSnapshot
     );
 
     try {

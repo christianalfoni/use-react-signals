@@ -5,31 +5,45 @@
 // can be tracked by React
 let currentSnapshot = 0;
 
+export type SignalNotifier = {
+  addContext(context: ObserverContext): void;
+  removeContext(context: ObserverContext): void;
+  notify(): void;
+  snapshot: number;
+};
+
 // Every signal created has a related signal notifier. This signal notifier is responsible for
 // keeping track of what components (observer contexts) are currently accessing the signal. When a signal changes
 // it will notify all related components. This is done by keeping a set of ObserverContexts
-export class SignalNotifier {
-  contexts = new Set<ObserverContext>();
-  constructor() {}
-  // A signal holds a global snapshot value, which changes whenever the signal changes.
-  // This snapshot is passed and stored on the ObserverContext to make sure
-  // React understands that a change has happened
-  snapshot = ++currentSnapshot;
-  addContext(context: ObserverContext) {
-    this.contexts.add(context);
+
+export function SignalNotifier(): SignalNotifier {
+  const contexts = new Set<ObserverContext>();
+  let snapshot = ++currentSnapshot;
+
+  return {
+    addContext,
+    removeContext,
+    notify,
+    get snapshot() {
+      return snapshot;
+    },
+  };
+
+  function addContext(context: ObserverContext) {
+    contexts.add(context);
   }
-  removeContext(context: ObserverContext) {
-    this.contexts.delete(context);
+  function removeContext(context: ObserverContext) {
+    contexts.delete(context);
   }
-  notify() {
+  function notify() {
     // Any signal change updates the global snapshot
-    this.snapshot = ++currentSnapshot;
+    snapshot = ++currentSnapshot;
 
     // A context can be synchronously added back to this signal related to firing the signal, which
     // could cause a loop. We only want to notify the current contexts
-    const contexts = Array.from(this.contexts);
+    const currentContexts = Array.from(contexts);
 
-    contexts.forEach((context) => context.notify(this.snapshot));
+    currentContexts.forEach((context) => context.notify(snapshot));
   }
 }
 
@@ -39,57 +53,68 @@ export class SignalNotifier {
 // it to notify these contexts when the signal value is updated. When the context is notified about a change it will remove itself from current signals
 // and notify any subscribing components. When component unmounts the subscription is disposed. This will remove the context from any tracked signals,
 // making sure that component unmount will also remove the context from any signals... making it primed for garbage collection
-export class ObserverContext {
-  // We keep a global reference to the currently active observer context
-  private static currentContext: ObserverContext | undefined = undefined;
-  private _snapshot = currentSnapshot;
 
-  static get current(): ObserverContext | undefined {
-    return ObserverContext.currentContext;
-  }
+export type ObserverContext = {
+  startTracking: () => void;
+  stopTracking: () => void;
+  subscribe: (subscriber: () => void) => () => void;
+  registerSignal: (signal: SignalNotifier) => void;
+  getSnapshot: () => number;
+  notify: (newSnapshot: number) => void;
+};
 
+ObserverContext.current = undefined as ObserverContext | undefined;
+
+export function ObserverContext() {
   // We track all signals accessed by this context
-  _signalNotifiers = new Set<SignalNotifier>();
+  const signalNotifiers = new Set<SignalNotifier>();
   // An ObserverContext only has one subscriber at any time
-  _subscriber?: () => void;
+  let currentSubscriber: (() => void) | undefined = undefined;
+  let snapshot = currentSnapshot;
+
+  const observerContext: ObserverContext = {
+    startTracking,
+    stopTracking,
+    subscribe,
+    registerSignal,
+    getSnapshot,
+    notify,
+  };
+
+  return observerContext;
+
   // Components are using "useSyncExternalStore" which expects a snapshot to indicate a change
   // to the store. We use a simple number for this to trigger reconciliation of a component. We start
   // out with the current as it reflects the current state of all signals
-  get snapshot() {
+  function getSnapshot() {
     // It is possible that a tracked signal has changed its snapshot after
     // we have stopped tracking and before we have started subscribing. We
     // have to guarantee to React that we indeed have the same snapshot as
     // when we initially tracked the signals, or React needs to reconcile again
-    if (!this._subscriber) {
-      this._signalNotifiers.forEach((signal) => {
-        this._snapshot = Math.max(this._snapshot, signal.snapshot);
+    if (!currentSubscriber) {
+      signalNotifiers.forEach((signal) => {
+        snapshot = Math.max(snapshot, signal.snapshot);
       });
     }
 
-    return this._snapshot;
+    return snapshot;
   }
 
-  constructor() {
-    // Use for memory leak debugging
-    // registry.register(this, this.id + " has been collected");
-  }
-
-  startTracking() {
+  function startTracking() {
     // We clear our existing signals as dynamic UIs might track different signals now
-    this._signalNotifiers.clear();
-    ObserverContext.currentContext = this;
+    ObserverContext.current = observerContext;
   }
 
   // Deactivates this context
-  stopTracking() {
-    if (ObserverContext.currentContext === this) {
-      ObserverContext.currentContext = undefined;
+  function stopTracking() {
+    if (ObserverContext.current === observerContext) {
+      ObserverContext.current = undefined;
     }
   }
 
-  registerSignal(signal: SignalNotifier) {
+  function registerSignal(signal: SignalNotifier) {
     // Track the signal access
-    this._signalNotifiers.add(signal);
+    signalNotifiers.add(signal);
   }
 
   // When adding a subscriber we ensure that the relevant signals are
@@ -98,19 +123,22 @@ export class ObserverContext {
   // be garbage collected. React asynchronously subscribes and unsubscribes,
   // but useSyncExternalStore has a mechanism that ensures the validity
   // of the subscription using snapshots
-  subscribe(subscriber: () => void) {
+  function subscribe(subscriber: () => void) {
     // If there's a previous subscription, we don't need to clean anything up
     // as we're just replacing the callback function
-    this._subscriber = subscriber;
+    currentSubscriber = subscriber;
 
     // Make sure all tracked signals have this context registered
-    this._signalNotifiers.forEach((signal) => signal.addContext(this));
+    signalNotifiers.forEach((signal) => signal.addContext(observerContext));
 
-    // Return unsubscribe function
+    console.log("Subscribing", signalNotifiers.size);
+
     return () => {
-      this._subscriber = undefined;
+      currentSubscriber = undefined;
       // Clean up by removing this context from all signals
-      this._signalNotifiers.forEach((signal) => signal.removeContext(this));
+      signalNotifiers.forEach((signal) =>
+        signal.removeContext(observerContext)
+      );
     };
   }
 
@@ -118,19 +146,19 @@ export class ObserverContext {
   // Here we always know that we get the very latest global snapshot as it was just
   // generated. We immediately apply it and React will now reconcile given it is
   // subscribing
-  notify(snapshot: number) {
-    this._snapshot = snapshot;
+  function notify(newSnapshot: number) {
+    snapshot = newSnapshot;
 
     // We clear the tracking information of the ObserverContext when we notify
     // as it should result in a new tracking
-    this._signalNotifiers.forEach((signal) => {
-      signal.removeContext(this);
+    signalNotifiers.forEach((signal) => {
+      signal.removeContext(observerContext);
     });
-    this._signalNotifiers.clear();
+    signalNotifiers.clear();
 
     // Notify the single subscriber if it exists
-    if (this._subscriber) {
-      this._subscriber();
+    if (currentSubscriber) {
+      currentSubscriber();
     }
   }
 }
