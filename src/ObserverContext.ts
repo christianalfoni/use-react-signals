@@ -81,6 +81,8 @@ export function ObserverContext() {
     notify,
   };
 
+  // registry.register(observerContext, "ObserverContext GONE!");
+
   return observerContext;
 
   // Components are using "useSyncExternalStore" which expects a snapshot to indicate a change
@@ -130,8 +132,6 @@ export function ObserverContext() {
 
     // Make sure all tracked signals have this context registered
     signalNotifiers.forEach((signal) => signal.addContext(observerContext));
-
-    console.log("Subscribing", signalNotifiers.size);
 
     return () => {
       currentSubscriber = undefined;
