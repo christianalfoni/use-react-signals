@@ -1,14 +1,26 @@
-import { useSignals } from "use-react-signals";
+import { signals } from "use-react-signals";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
 
-function App() {
-  const [counter, setCounter] = useSignals({
+function Counter() {
+  const [counter, setCounter] = signals({
     count: 0,
     increment,
   });
 
+  return counter;
+
+  function increment() {
+    setCounter({
+      count: counter.count + 1,
+    });
+  }
+}
+
+const counter = Counter();
+
+function App() {
   return (
     <>
       <div>
@@ -31,12 +43,6 @@ function App() {
       </p>
     </>
   );
-
-  function increment() {
-    setCounter({
-      count: counter.count + 1,
-    });
-  }
 }
 
 export default App;

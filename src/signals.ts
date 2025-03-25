@@ -1,14 +1,15 @@
 import { useRef } from "react";
 import { signal } from "./signal";
 import { isServer } from "./utils";
+import { produce } from "immer";
 
 type NonFunctionPropertyNames<T> = {
   [K in keyof T]: T[K] extends Function ? never : K;
 }[keyof T];
 
-export type SignalsTuple<T> = [
+export type SignalsTuple<T, O = Pick<T, NonFunctionPropertyNames<T>>> = [
   T,
-  (partial: Partial<Pick<T, NonFunctionPropertyNames<T>>>) => void
+  (partial: Partial<O> | ((current: O) => O | void)) => void
 ];
 
 function serverThrowUpdateError() {
@@ -20,6 +21,20 @@ export function createSignals<T extends Record<string, any>>(value: T) {
   const getters: any = {};
   const functions: any = {};
   const setter = (partial: any) => {
+    if (typeof partial === "function") {
+      const draft: any = {};
+      for (const key in setters) {
+        draft[key] = getters[key];
+      }
+
+      const newState: any = produce(draft, partial);
+
+      for (const key in newState) {
+        setters[key](newState[key]);
+      }
+      return;
+    }
+
     for (const key in partial) {
       setters[key](partial[key]);
     }
@@ -67,4 +82,8 @@ export function useSignals<T extends Record<string, any>>(value: T) {
   }
 
   return signalRef.current.tuple;
+}
+
+export function signals<T extends Record<string, any>>(value: T) {
+  return createSignals(value).tuple;
 }

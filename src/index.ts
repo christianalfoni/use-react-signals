@@ -1,2 +1,2 @@
-export { useSignals } from "./signals";
+export { useSignals, signals } from "./signals";
 export { observer } from "./observer";

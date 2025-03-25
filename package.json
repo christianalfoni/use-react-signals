@@ -1,6 +1,6 @@
 {
   "name": "use-react-signals",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Replace useState with useSignal and forget about performance issues",
   "files": [
     "dist"
@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "babel-plugin-observing-components": "^0.1.8",
+    "immer": "^10.1.1",
     "swc-plugin-observing-components": "^0.1.5"
   }
 }
